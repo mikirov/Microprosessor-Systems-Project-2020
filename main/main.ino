@@ -7,6 +7,9 @@
 #define INPUT_BUFFER_SIZE 100
 #define RX_PIN 3
 #define TX_PIN 1
+#define RED_PIN 5
+#define GREEN_PIN 4
+#define BLUE_PIN 0
 
 
 //TODO: read ssid and password from a file or environment variable
@@ -29,6 +32,10 @@ void setup(){
   
 	pinMode(TX_PIN, OUTPUT);
 	pinMode(RX_PIN, INPUT);
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+
   
   WiFi.begin(ssid, password);
   WiFi.config(ip, gateway, subnet);
@@ -58,9 +65,17 @@ void setup(){
  
 }
 
+void SetLids(){
+    analogWrite(RED_PIN, Red);
+    analogWrite(GREEN_PIN, Green);
+    analogWrite(BLUE_PIN, Blue);
+  
+}
+
 void loop(){
 	HandleBluetoothInput();
 	HandleWifiInput();
+  SetLeds();
 } 
 
 void HandleBluetoothInput(){
@@ -97,16 +112,19 @@ void HandleWifiInput(){
 }
   
 void ProcessInput(const char Input[]){   
-  
+
+  #ifdef DEBUG
 	Serial.println(Input);
-	
+	#endif
+  
 	if(strlen(Input) != 6) return;
 
   Red = Input[0] * 16 + Input[1];
 	Green = Input[2] * 16 + Input[3];
   Blue = Input[4] * 16 + Input[5];
 
+  #ifdef DEBUG
 	Serial.printf("Red: %d, Green: %d, Blue: %d", Red, Green, Blue);
-
+  #endif
 }
   
