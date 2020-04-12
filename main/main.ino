@@ -1,6 +1,7 @@
 #include <string.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
+#include <ESP8266WebServer.h>   // Include the WebServer library
 
 
 #define DEBUG 1 // set to 0 to disable debug mode
@@ -13,30 +14,32 @@
 
 
 //TODO: read ssid and password from a file or environment variable
-const char* ssid = "It hurs when IP"; //put your wifi network name here
-const char* password = "12345678"; //put your wifi password here
+const char* ssid = "velios"; //put your wifi network name here
+const char* password = "789123654"; //put your wifi password here
+
+
+ESP8266WebServer server(80);    // Create a webserver object that listens for HTTP request on port 80
+
+void handleRoot();              // function prototypes for HTTP handlers
+void handleNotFound();
+void handleColor();
 
 //statically assigned ip, gateway and subnet mask
 IPAddress ip(192, 168, 1, 143);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
-int Red = 0, Green = 0, Blue = 0;
-
-//web server on port 80
-WiFiServer server(80);
-WiFiClient client;
 
 void setup(){
-	Serial.begin(152000);
-  
+  Serial.begin(115200);
+
 	pinMode(TX_PIN, OUTPUT);
 	pinMode(RX_PIN, INPUT);
   pinMode(RED_PIN, OUTPUT);
   pinMode(BLUE_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
 
-  
+  //TODO: read ssid and password from a file or environment variable
   WiFi.begin(ssid, password);
   WiFi.config(ip, gateway, subnet);
   Serial.println("Connecting");
@@ -48,24 +51,20 @@ void setup(){
     Serial.println(".");
     #endif
   }
-  #ifdef DEBUG
-  Serial.print("Connected to ");
-  Serial.println(ssid);
 
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-  #endif
-  
-  //Start the TCP server
-  server.begin();
+  server.on("/",HTTP_GET, handleRoot);               // Call the 'handleRoot' function when a client requests URI "/"
+  server.on("/color", HTTP_POST, handleColor);
+  server.onNotFound(handleNotFound);        // When a client requests an unknown URI (i.e. something other than "/"), call function "handleNotFound"
+
+  server.begin();                           // Actually start the server
   
   #ifdef DEBUG
-  Serial.printf("Web server started, open %s in a web browser\n", WiFi.localIP().toString().c_str());
+  Serial.printf("HTTP server started, open %s in a web browser\n", WiFi.localIP().toString().c_str());
   #endif
  
 }
 
-void SetLids(){
+void SetLeds(const int Red, const int Green, const int Blue){
     analogWrite(RED_PIN, Red);
     analogWrite(GREEN_PIN, Green);
     analogWrite(BLUE_PIN, Blue);
@@ -74,8 +73,7 @@ void SetLids(){
 
 void loop(){
 	HandleBluetoothInput();
-	HandleWifiInput();
-  SetLeds();
+  server.handleClient();                    // Listen for HTTP requests from clients
 } 
 
 void HandleBluetoothInput(){
@@ -95,22 +93,6 @@ void HandleBluetoothInput(){
 
 }
 
-void HandleWifiInput(){
-  client = server.available();
-  if(client && client.connected()){
-    char WifiInputString[INPUT_BUFFER_SIZE];
-    int ReadIndex = 0;
-    while(client.available() > 0 && ReadIndex < INPUT_BUFFER_SIZE - 1){
-        WifiInputString[ReadIndex] = static_cast<char>(client.read());
-        ReadIndex++;
-    }
-    WifiInputString[ReadIndex] = '\0';
-    ProcessInput(WifiInputString);
-    
-    client.stop();
-  }
-}
-  
 void ProcessInput(const char Input[]){   
 
   #ifdef DEBUG
@@ -118,13 +100,53 @@ void ProcessInput(const char Input[]){
 	#endif
   
 	if(strlen(Input) != 6) return;
+  int Red = 0, Green = 0, Blue = 0;
 
-  Red = Input[0] * 16 + Input[1];
-	Green = Input[2] * 16 + Input[3];
-  Blue = Input[4] * 16 + Input[5];
+  int Parsed[6];
+  for(int i = 0; i < 6; i++){
+    if(Input[i] >= '0' && Input[i] <= '9'){
+      Parsed[i] = Input[i] - '0';
+    }
+    else if(Input[i] >= 'a' && Input[i] <= 'z'){
+      Parsed[i] = Input[i] - 'a' + 10;  
+    }
+    else if(Input[i] >= 'A' && Input[i] <= 'Z'){
+      Parsed[i] = Input[i] - 'A' + 10;  
+    }
+    else{
+      Serial.println("Invalid input");
+      return;  
+    }
+  }
+ 
+  
+  Red = (Parsed[0]) * 16 + (Parsed[1]);
+	Green = (Parsed[2]) * 16 + (Parsed[3]);
+  Blue = (Parsed[4]) * 16 + (Parsed[5]);
 
-  #ifdef DEBUG
-	Serial.printf("Red: %d, Green: %d, Blue: %d", Red, Green, Blue);
+  #ifdef DEBUG                                                                                                                                                    
+	Serial.printf("Red: %d, Green: %d, Blue: %d\n", Red, Green, Blue);
   #endif
+  SetLeds(Red, Green, Blue);
+}
+
+void handleRoot() {                         // When URI / is requested, send a web page with a button to toggle the LED
+  server.send(200, "text/html", "<form action=\"/color\" method=\"POST\"><label for=\"color\"></label><input name=\"color\" type=\"color\" value=\"#ff0000\"><input type=\"submit\" value=\"Submit\"></form>");
+}
+
+void handleColor(){
+  if( ! server.hasArg("color") || server.arg("color") == NULL) {
+    server.send(400, "text/plain", "400: Invalid Request");         // The request is invalid, so send HTTP status 400
+    return;
+  }
+  char temp[6];
+//  strcpy(server.arg("color").c_str()[1], temp);
+  ProcessInput(&server.arg("color").c_str()[1]);
+  server.sendHeader("Location","/");        // Add a header to respond with a new location for the browser to go to the home page again
+  server.send(303);                         // Send it back to the browser with an HTTP status 303 (See Other) to redirect
+}
+
+void handleNotFound(){
+  server.send(404, "text/plain", "404: Not found"); // Send HTTP status 404 (Not Found) when there's no handler for the URI in the request
 }
   
