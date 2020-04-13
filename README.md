@@ -15,7 +15,7 @@ A get request on '/' gives us the default page. It consists of a form with a col
 
 A post request on '/color' sends the url-encoded color parameter as a hexadecimal 3-byte sequence. The web  server interprets it and sets the color of the led strip accordingly.
 
-[!][postman](http://github.com/mikirov/Microprosessor-Systems-Project-2020/blob/master/images/postman.png)
+[!][postman](https://github.com/mikirov/Microprosessor-Systems-Project-2020/blob/master/images/postman.PNG)
 
 resulting in:
 
@@ -23,7 +23,7 @@ resulting in:
 
 we can also send a post request directly from the color picker user interface:
 
-![webpage](http://github.com/mikirov/Microprosessor-Systems-Project-2020/blob/master/images/webpage.png)
+![webpage](http://github.com/mikirov/Microprosessor-Systems-Project-2020/blob/master/images/webpage.PNG)
 
 resulting in:
 
