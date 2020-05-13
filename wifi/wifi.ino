@@ -3,11 +3,9 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>   // Include the WebServer library
 
-
 #define DEBUG 1 // set to 0 to disable debug mode
 #define INPUT_BUFFER_SIZE 100
-#define RX_PIN 3
-#define TX_PIN 1
+
 #define RED_PIN 5
 #define GREEN_PIN 4
 #define BLUE_PIN 0
@@ -16,7 +14,6 @@
 //TODO: read ssid and password from a file or environment variable
 const char* ssid = "velios"; //put your wifi network name here
 const char* password = "789123654"; //put your wifi password here
-
 
 ESP8266WebServer server(80);    // Create a webserver object that listens for HTTP request on port 80
 
@@ -31,10 +28,8 @@ IPAddress subnet(255, 255, 255, 0);
 
 
 void setup(){
-  Serial.begin(115200);
-
-	pinMode(TX_PIN, OUTPUT);
-	pinMode(RX_PIN, INPUT);
+  Serial.begin(9600);
+  
   pinMode(RED_PIN, OUTPUT);
   pinMode(BLUE_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
@@ -72,26 +67,9 @@ void SetLeds(const int Red, const int Green, const int Blue){
 }
 
 void loop(){
-	HandleBluetoothInput();
   server.handleClient();                    // Listen for HTTP requests from clients
 } 
 
-void HandleBluetoothInput(){
-	int ReadIndex = 0;
-	char SerialInputString[INPUT_BUFFER_SIZE];
-
-	if (Serial.available() > 0) {             
-		while (Serial.available() > 0 && ReadIndex < INPUT_BUFFER_SIZE - 1) {
-			 SerialInputString[ReadIndex] = Serial.read(); 
-			 ReadIndex++;
-       if(Serial.available() == false) delayMicroseconds(1200);
-             
-		}
-		SerialInputString[ReadIndex] = '\0'; // put terminating character at the end of the read string
-		ProcessInput(SerialInputString);
-	}
-
-}
 
 void ProcessInput(const char Input[]){   
 
@@ -119,7 +97,6 @@ void ProcessInput(const char Input[]){
     }
   }
  
-  
   Red = (Parsed[0]) * 16 + (Parsed[1]);
 	Green = (Parsed[2]) * 16 + (Parsed[3]);
   Blue = (Parsed[4]) * 16 + (Parsed[5]);
